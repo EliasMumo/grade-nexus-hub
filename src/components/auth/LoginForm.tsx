@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -26,10 +27,10 @@ const LoginForm = () => {
     
     try {
       await login(email, password);
-      navigate('/dashboard');
+      // Note: Navigation is handled by the AuthContext's session change detection
     } catch (error) {
-      // Error is handled in the auth context
-    } finally {
+      console.error('Login error:', error);
+      // Error is handled in the auth context but we'll ensure form state is reset
       setIsSubmitting(false);
     }
   };

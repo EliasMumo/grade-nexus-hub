@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -42,10 +43,10 @@ const RegisterForm = () => {
     
     try {
       await register(name, email, password, role);
-      navigate('/dashboard');
+      // Note: Navigation is handled by the AuthContext's session change detection
     } catch (error) {
+      console.error('Registration error:', error);
       // Error is handled in the auth context
-    } finally {
       setIsSubmitting(false);
     }
   };
