@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type ProfilesRow = Database['public']['Tables']['profiles']['Row'];
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -32,16 +32,16 @@ const AdminDashboard = () => {
         // Fetch students
         const { data: studentsData, error: studentsError } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, role')
-          .eq('role', 'student');
+          .select('*')
+          .filter('role', 'eq', 'student');
           
         if (studentsError) throw studentsError;
         
         // Fetch teachers
         const { data: teachersData, error: teachersError } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, role')
-          .eq('role', 'teacher');
+          .select('*')
+          .filter('role', 'eq', 'teacher');
           
         if (teachersError) throw teachersError;
         
@@ -52,7 +52,7 @@ const AdminDashboard = () => {
         const logs = await fetchAuditLogs(10);
         
         // Transform students data to match User type
-        const transformedStudents = studentsData.map((s: ProfileRow) => ({
+        const transformedStudents = (studentsData as ProfilesRow[]).map((s) => ({
           id: s.id,
           name: s.full_name,
           email: '', // We don't get emails from profiles table
@@ -61,7 +61,7 @@ const AdminDashboard = () => {
         }));
         
         // Transform teachers data to match User type
-        const transformedTeachers = teachersData.map((t: ProfileRow) => ({
+        const transformedTeachers = (teachersData as ProfilesRow[]).map((t) => ({
           id: t.id,
           name: t.full_name,
           email: '', // We don't get emails from profiles table

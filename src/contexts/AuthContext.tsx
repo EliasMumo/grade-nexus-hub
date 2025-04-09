@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { User, UserRole } from '@/types';
@@ -43,12 +44,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (error) throw error;
             
             if (profile) {
+              // Explicitly cast profile to ProfilesRow to avoid TypeScript errors
+              const typedProfile = profile as ProfilesRow;
+              
               const userWithProfile: User = {
                 id: session.user.id,
-                name: profile.full_name,
+                name: typedProfile.full_name,
                 email: session.user.email || '',
-                role: profile.role as UserRole,
-                avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=3b82f6&color=fff`,
+                role: typedProfile.role as UserRole,
+                avatar: typedProfile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(typedProfile.full_name)}&background=3b82f6&color=fff`,
               };
               
               setUser(userWithProfile);
@@ -85,12 +89,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (error) throw error;
           
           if (profile) {
+            // Explicitly cast profile to ProfilesRow to avoid TypeScript errors
+            const typedProfile = profile as ProfilesRow;
+            
             const userWithProfile: User = {
               id: session.user.id,
-              name: profile.full_name,
+              name: typedProfile.full_name,
               email: session.user.email || '',
-              role: profile.role as UserRole,
-              avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=3b82f6&color=fff`,
+              role: typedProfile.role as UserRole,
+              avatar: typedProfile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(typedProfile.full_name)}&background=3b82f6&color=fff`,
             };
             
             setUser(userWithProfile);
