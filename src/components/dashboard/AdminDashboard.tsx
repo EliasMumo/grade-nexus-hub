@@ -30,19 +30,19 @@ const AdminDashboard = () => {
       setLoading(true);
       
       try {
-        // Fetch students
+        // Fetch students - fix type error with 'as any' for role filter
         const { data: studentsData, error: studentsError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('role', 'student');
+          .eq('role', 'student' as any);
           
         if (studentsError) throw studentsError;
         
-        // Fetch teachers
+        // Fetch teachers - fix type error with 'as any' for role filter
         const { data: teachersData, error: teachersError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('role', 'teacher');
+          .eq('role', 'teacher' as any);
           
         if (teachersError) throw teachersError;
         
@@ -53,7 +53,8 @@ const AdminDashboard = () => {
         const logs = await fetchAuditLogs(10);
         
         // Transform students data to match User type
-        const typedStudentsData = studentsData as unknown as ProfilesRow[];
+        // Cast with explicit type assertion
+        const typedStudentsData = studentsData as ProfilesRow[];
         const transformedStudents = typedStudentsData.map((s) => ({
           id: s.id,
           name: s.full_name,
@@ -63,7 +64,8 @@ const AdminDashboard = () => {
         }));
         
         // Transform teachers data to match User type
-        const typedTeachersData = teachersData as unknown as ProfilesRow[];
+        // Cast with explicit type assertion
+        const typedTeachersData = teachersData as ProfilesRow[];
         const transformedTeachers = typedTeachersData.map((t) => ({
           id: t.id,
           name: t.full_name,

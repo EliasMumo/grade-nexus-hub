@@ -38,14 +38,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { data: profile, error } = await supabase
               .from('profiles')
               .select('*')
-              .eq('id', session.user.id)
+              .eq('id', session.user.id as any) // Type assertion to fix type mismatch
               .single();
               
             if (error) throw error;
             
             if (profile) {
-              // Cast the data to the correct type
-              const typedProfile = profile as unknown as ProfilesRow;
+              // Cast the data to the correct type with explicit type assertion
+              const typedProfile = profile as ProfilesRow;
               
               const userWithProfile: User = {
                 id: session.user.id,
@@ -83,14 +83,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', session.user.id as any) // Type assertion to fix type mismatch
             .single();
             
           if (error) throw error;
           
           if (profile) {
-            // Cast to correct type
-            const typedProfile = profile as unknown as ProfilesRow;
+            // Cast to correct type with explicit type assertion
+            const typedProfile = profile as ProfilesRow;
             
             const userWithProfile: User = {
               id: session.user.id,

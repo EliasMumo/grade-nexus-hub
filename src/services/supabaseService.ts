@@ -1,6 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, Course, Grade, GradeReport, ClassPerformance, AuditLog, UserRole } from '@/types';
 import { Database } from '@/integrations/supabase/types';
+import { PostgrestError } from '@supabase/supabase-js';
 
 type ProfilesRow = Database['public']['Tables']['profiles']['Row'];
 type CoursesRow = Database['public']['Tables']['courses']['Row'];
@@ -13,23 +15,23 @@ export const fetchUserProfile = async (userId: string) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', userId)
+    .eq('id', userId as any)
     .single();
     
   if (error) throw error;
-  return data as unknown as ProfilesRow;
+  return data as ProfilesRow;
 };
 
 export const updateUserProfile = async (userId: string, updates: Partial<ProfilesRow>) => {
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates)
-    .eq('id', userId)
+    .update(updates as any)
+    .eq('id', userId as any)
     .select()
     .single();
     
   if (error) throw error;
-  return data as unknown as ProfilesRow;
+  return data as ProfilesRow;
 };
 
 // Courses
@@ -43,7 +45,7 @@ export const fetchCourses = async () => {
   if (coursesError) throw coursesError;
   
   // Cast the coursesData to the correct type
-  const typedCoursesData = coursesData as unknown as CoursesRow[];
+  const typedCoursesData = coursesData as CoursesRow[];
   
   // Then, for each course, fetch the teacher profile
   const coursesWithTeachers = await Promise.all(typedCoursesData.map(async (course) => {
@@ -51,7 +53,7 @@ export const fetchCourses = async () => {
       const { data: teacherProfile } = await supabase
         .from('profiles')
         .select('full_name')
-        .eq('id', course.teacher_id)
+        .eq('id', course.teacher_id as any)
         .single();
         
       return {
@@ -59,7 +61,7 @@ export const fetchCourses = async () => {
         name: course.name,
         code: course.code,
         teacherId: course.teacher_id,
-        teacherName: (teacherProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
+        teacherName: (teacherProfile as any)?.full_name || 'Unknown',
       };
     } else {
       return {
@@ -79,11 +81,11 @@ export const fetchCoursesByTeacher = async (teacherId: string) => {
   const { data, error } = await supabase
     .from('courses')
     .select('*')
-    .eq('teacher_id', teacherId)
+    .eq('teacher_id', teacherId as any)
     .order('name', { ascending: true });
     
   if (error) throw error;
-  return data as unknown as CoursesRow[];
+  return data as CoursesRow[];
 };
 
 export const fetchCoursesByStudent = async (studentId: string) => {
@@ -91,12 +93,12 @@ export const fetchCoursesByStudent = async (studentId: string) => {
   const { data: enrollmentsData, error: enrollmentsError } = await supabase
     .from('enrollments')
     .select('course_id')
-    .eq('student_id', studentId);
+    .eq('student_id', studentId as any);
     
   if (enrollmentsError) throw enrollmentsError;
   
   // Cast to the correct type
-  const typedEnrollmentsData = enrollmentsData as unknown as EnrollmentsRow[];
+  const typedEnrollmentsData = enrollmentsData as EnrollmentsRow[];
   
   if (!typedEnrollmentsData.length) {
     return [];
@@ -109,13 +111,13 @@ export const fetchCoursesByStudent = async (studentId: string) => {
   const { data: coursesData, error: coursesError } = await supabase
     .from('courses')
     .select('*')
-    .in('id', courseIds as string[])
+    .in('id', courseIds as any)
     .order('name', { ascending: true });
     
   if (coursesError) throw coursesError;
   
   // Cast the coursesData to the correct type
-  const typedCoursesData = coursesData as unknown as CoursesRow[];
+  const typedCoursesData = coursesData as CoursesRow[];
   
   // Get teacher names for each course
   const coursesWithTeachers = await Promise.all(typedCoursesData.map(async (course) => {
@@ -123,7 +125,7 @@ export const fetchCoursesByStudent = async (studentId: string) => {
       const { data: teacherProfile } = await supabase
         .from('profiles')
         .select('full_name')
-        .eq('id', course.teacher_id)
+        .eq('id', course.teacher_id as any)
         .single();
         
       return {
@@ -131,7 +133,7 @@ export const fetchCoursesByStudent = async (studentId: string) => {
         name: course.name,
         code: course.code,
         teacherId: course.teacher_id,
-        teacherName: (teacherProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
+        teacherName: (teacherProfile as any)?.full_name || 'Unknown',
       };
     } else {
       return {
@@ -152,25 +154,25 @@ export const fetchEnrollments = async (courseId: string) => {
   const { data: enrollmentsData, error: enrollmentsError } = await supabase
     .from('enrollments')
     .select('id, student_id')
-    .eq('course_id', courseId);
+    .eq('course_id', courseId as any);
     
   if (enrollmentsError) throw enrollmentsError;
   
   // Cast to the correct type
-  const typedEnrollmentsData = enrollmentsData as unknown as EnrollmentsRow[];
+  const typedEnrollmentsData = enrollmentsData as EnrollmentsRow[];
   
   // Fetch student names
   const enrollmentsWithStudents = await Promise.all(typedEnrollmentsData.map(async (enrollment) => {
     const { data: studentProfile } = await supabase
       .from('profiles')
       .select('full_name')
-      .eq('id', enrollment.student_id)
+      .eq('id', enrollment.student_id as any)
       .single();
       
     return {
       id: enrollment.id,
       studentId: enrollment.student_id,
-      studentName: (studentProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
+      studentName: (studentProfile as any)?.full_name || 'Unknown',
     };
   }));
   
@@ -182,13 +184,13 @@ export const fetchGradesByStudent = async (studentId: string) => {
   const { data: gradesData, error: gradesError } = await supabase
     .from('grades')
     .select('*')
-    .eq('student_id', studentId)
+    .eq('student_id', studentId as any)
     .order('created_at', { ascending: false });
     
   if (gradesError) throw gradesError;
   
   // Cast to the correct type
-  const typedGradesData = gradesData as unknown as GradesRow[];
+  const typedGradesData = gradesData as GradesRow[];
   
   // Fetch course names and grader names
   const gradesWithDetails = await Promise.all(typedGradesData.map(async (grade) => {
@@ -196,7 +198,7 @@ export const fetchGradesByStudent = async (studentId: string) => {
     const { data: course } = await supabase
       .from('courses')
       .select('name')
-      .eq('id', grade.course_id)
+      .eq('id', grade.course_id as any)
       .single();
       
     return {
@@ -204,7 +206,7 @@ export const fetchGradesByStudent = async (studentId: string) => {
       studentId: grade.student_id,
       studentName: '', // Will be filled by the calling component
       courseId: grade.course_id,
-      courseName: (course as CoursesRow)?.name || 'Unknown',
+      courseName: (course as any)?.name || 'Unknown',
       value: grade.value,
       comment: grade.comment,
       date: grade.graded_at,
@@ -218,26 +220,26 @@ export const fetchGradesByCourse = async (courseId: string) => {
   const { data: gradesData, error: gradesError } = await supabase
     .from('grades')
     .select('*')
-    .eq('course_id', courseId)
+    .eq('course_id', courseId as any)
     .order('created_at', { ascending: false });
     
   if (gradesError) throw gradesError;
   
   // Cast to the correct type
-  const typedGradesData = gradesData as unknown as GradesRow[];
+  const typedGradesData = gradesData as GradesRow[];
   
   // Fetch student names
   const gradesWithStudents = await Promise.all(typedGradesData.map(async (grade) => {
     const { data: studentProfile } = await supabase
       .from('profiles')
       .select('full_name')
-      .eq('id', grade.student_id)
+      .eq('id', grade.student_id as any)
       .single();
       
     return {
       id: grade.id,
       studentId: grade.student_id,
-      studentName: (studentProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
+      studentName: (studentProfile as any)?.full_name || 'Unknown',
       courseId: grade.course_id,
       courseName: '', // Will be filled by the calling component
       value: grade.value,
@@ -437,7 +439,8 @@ export const createAuditLog = async (
   details?: any
 ) => {
   try {
-    const insertData = {
+    // Fix: Explicitly type the insertData to match the Supabase expected insert type
+    const insertData: Database['public']['Tables']['audit_logs']['Insert'] = {
       user_id: userId,
       action,
       entity_type: entityType,
