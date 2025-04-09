@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockDataService } from '@/services/mockData';
+import { fetchAuditLogs, fetchCourses } from '@/services/supabaseService';
 import { AuditLog, User } from '@/types';
 import StatCard from './StatCard';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -22,21 +23,62 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      
+      try {
+        // Fetch students
+        const { data: studentsData, error: studentsError } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, role')
+          .eq('role', 'student');
+          
+        if (studentsError) throw studentsError;
+        
+        // Fetch teachers
+        const { data: teachersData, error: teachersError } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, role')
+          .eq('role', 'teacher');
+          
+        if (teachersError) throw teachersError;
+        
+        // Fetch courses
+        const courses = await fetchCourses();
+        
+        // Fetch audit logs
+        const logs = await fetchAuditLogs(10);
+        
+        // Transform students data to match User type
+        const transformedStudents = studentsData.map(s => ({
+          id: s.id,
+          name: s.full_name,
+          email: '', // We don't get emails from profiles table
+          role: 'student' as const,
+          avatar: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.full_name)}&background=22c55e&color=fff`,
+        }));
+        
+        // Transform teachers data to match User type
+        const transformedTeachers = teachersData.map(t => ({
+          id: t.id,
+          name: t.full_name,
+          email: '', // We don't get emails from profiles table
+          role: 'teacher' as const,
+          avatar: t.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.full_name)}&background=8b5cf6&color=fff`,
+        }));
+        
+        setStudents(transformedStudents);
+        setTeachers(transformedTeachers);
+        setCoursesCount(courses.length);
+        setAuditLogs(logs);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    setTimeout(() => {
-      const allStudents = mockDataService.getStudents();
-      const allTeachers = mockDataService.getTeachers();
-      const allCourses = mockDataService.getCourses();
-      const logs = mockDataService.getAuditLogs();
-      
-      setStudents(allStudents);
-      setTeachers(allTeachers);
-      setCoursesCount(allCourses.length);
-      setAuditLogs(logs.slice(0, 10)); // Only take the 10 most recent logs
-      
-      setLoading(false);
-    }, 800);
+    fetchDashboardData();
   }, []);
 
   if (loading) {
@@ -79,7 +121,7 @@ const AdminDashboard = () => {
 
   const activityData = generateActivityData();
   
-  // Calculate new users in last 7 days (simulated)
+  // Calculate new users in last 7 days (simulated for now)
   const newUsersCount = 8;
 
   const getInitials = (name: string) => {
@@ -259,7 +301,7 @@ const AdminDashboard = () => {
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <p className="text-sm text-muted-foreground">{user.email || 'No email available'}</p>
                     </div>
                   </div>
                   <Badge variant={user.role === 'student' ? 'secondary' : 'outline'}>

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockDataService } from '@/services/mockData';
+import { fetchStudentReport } from '@/services/supabaseService';
 import { GradeReport } from '@/types';
 import StatCard from './StatCard';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -19,31 +19,35 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     if (user) {
-      // Simulate loading
       setLoadingReport(true);
-      setTimeout(() => {
-        const report = mockDataService.getStudentReport(user.id);
-        setGradeReport(report);
-        
-        if (report) {
-          // Transform grade data for chart
-          const grades = report.courses.flatMap(course => 
-            course.grades.map(grade => ({
-              date: grade.date,
-              value: grade.value,
-              courseName: course.courseName
-            }))
-          );
+      
+      fetchStudentReport(user.id)
+        .then(report => {
+          setGradeReport(report);
           
-          // Sort by date
-          grades.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-          
-          // Only get the recent 10 grades
-          setRecentGrades(grades.slice(-10));
-        }
-        
-        setLoadingReport(false);
-      }, 800);
+          if (report) {
+            // Transform grade data for chart
+            const grades = report.courses.flatMap(course => 
+              course.grades.map(grade => ({
+                date: grade.date,
+                value: grade.value,
+                courseName: course.courseName
+              }))
+            );
+            
+            // Sort by date
+            grades.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+            // Only get the recent 10 grades
+            setRecentGrades(grades.slice(-10));
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching student report:', error);
+        })
+        .finally(() => {
+          setLoadingReport(false);
+        });
     }
   }, [user]);
 
@@ -69,9 +73,9 @@ const StudentDashboard = () => {
 
   // Calculate how many courses are above class average
   const courseCount = gradeReport.courses.length;
-  const highPerformingCount = Math.floor(courseCount * 0.7); // Simulated data
+  const highPerformingCount = Math.floor(courseCount * 0.7); // Simulated data for now
   
-  // Calculate recent performance - positive or negative trend (random for demo)
+  // Calculate recent performance - positive or negative trend (simulated for now)
   const recentTrend = Math.floor(Math.random() * 11) - 5; // -5 to +5
 
   return (

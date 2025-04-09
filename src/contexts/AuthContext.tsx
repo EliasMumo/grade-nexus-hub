@@ -1,7 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { User, UserRole } from '@/types';
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -10,75 +12,112 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  session: Session | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user database for demo purposes
-const MOCK_USERS: Record<string, { password: string; userData: User }> = {
-  'admin@example.com': {
-    password: 'admin123',
-    userData: {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@example.com',
-      role: 'admin',
-      avatar: 'https://ui-avatars.com/api/?name=Admin+User&background=3b82f6&color=fff',
-    },
-  },
-  'teacher@example.com': {
-    password: 'teacher123',
-    userData: {
-      id: '2',
-      name: 'Teacher User',
-      email: 'teacher@example.com',
-      role: 'teacher',
-      avatar: 'https://ui-avatars.com/api/?name=Teacher+User&background=8b5cf6&color=fff',
-    },
-  },
-  'student@example.com': {
-    password: 'student123',
-    userData: {
-      id: '3',
-      name: 'Student User',
-      email: 'student@example.com',
-      role: 'student',
-      avatar: 'https://ui-avatars.com/api/?name=Student+User&background=22c55e&color=fff',
-    },
-  },
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   
+  // Initialize auth state
   useEffect(() => {
-    // Check for stored user on initial load
-    const storedUser = localStorage.getItem('gms_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('gms_user');
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        
+        if (session && session.user) {
+          try {
+            // Fetch the user's profile to get their role and other info
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (error) throw error;
+            
+            if (profile) {
+              const userWithProfile: User = {
+                id: session.user.id,
+                name: profile.full_name,
+                email: session.user.email || '',
+                role: profile.role as UserRole,
+                avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=3b82f6&color=fff`,
+              };
+              
+              setUser(userWithProfile);
+            } else {
+              // This should rarely happen since the profile should be created via trigger
+              console.error('Profile not found for authenticated user');
+              setUser(null);
+            }
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+        
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    );
+
+    // Then check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session && session.user) {
+          // Fetch the user's profile
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (error) throw error;
+          
+          if (profile) {
+            const userWithProfile: User = {
+              id: session.user.id,
+              name: profile.full_name,
+              email: session.user.email || '',
+              role: profile.role as UserRole,
+              avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=3b82f6&color=fff`,
+            };
+            
+            setUser(userWithProfile);
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      const userRecord = MOCK_USERS[email.toLowerCase()];
-      if (!userRecord || userRecord.password !== password) {
-        throw new Error('Invalid email or password');
-      }
+      if (error) throw error;
       
-      setUser(userRecord.userData);
-      localStorage.setItem('gms_user', JSON.stringify(userRecord.userData));
       toast.success('Logged in successfully');
     } catch (error) {
       console.error('Login error:', error);
@@ -92,30 +131,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string, role: UserRole) => {
     setLoading(true);
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      if (MOCK_USERS[email.toLowerCase()]) {
-        throw new Error('Email already registered');
-      }
-      
-      // In a real app, we'd send this to a server
-      // For demo, just add to our mock database
-      const newUser: User = {
-        id: `user_${Date.now()}`,
-        name,
-        email: email.toLowerCase(),
-        role,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3b82f6&color=fff`,
-      };
-      
-      MOCK_USERS[email.toLowerCase()] = {
+      const { error } = await supabase.auth.signUp({
+        email,
         password,
-        userData: newUser,
-      };
+        options: {
+          data: {
+            name,
+            role,
+          },
+        },
+      });
       
-      setUser(newUser);
-      localStorage.setItem('gms_user', JSON.stringify(newUser));
+      if (error) throw error;
+      
       toast.success('Registration successful');
     } catch (error) {
       console.error('Registration error:', error);
@@ -126,10 +154,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('gms_user');
-    toast.success('Logged out successfully');
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      setUser(null);
+      setSession(null);
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to logout');
+    }
   };
 
   const value = {
@@ -139,6 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     isAuthenticated: !!user,
+    session,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
