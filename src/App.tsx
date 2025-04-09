@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import AuthCallback from "./pages/AuthCallback";
 
 // Layouts
 import DashboardLayout from "./components/layout/DashboardLayout";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             {/* Protected routes - Dashboard layout */}
             <Route path="/" element={<DashboardLayout />}>
