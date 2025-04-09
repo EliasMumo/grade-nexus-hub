@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,17 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Grade system specific colors
+				system: {
+					blue: '#3b82f6',
+					indigo: '#6366f1',
+					purple: '#8b5cf6',
+					pink: '#ec4899',
+					green: '#22c55e',
+					red: '#ef4444',
+					yellow: '#eab308',
+					cyan: '#06b6d4',
 				}
 			},
 			borderRadius: {
