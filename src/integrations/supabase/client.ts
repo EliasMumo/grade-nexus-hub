@@ -18,7 +18,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     storageKey: 'gradenexus-auth-token',
     flowType: 'pkce',
-    // Fix: Changed 'redirectTo' to use redirect_to which is the correct property name
-    redirect_to: `${siteUrl}/auth/callback`
+    // Fix: Changed 'redirect_to' to 'redirectTo' which is the correct property name
+    redirectTo: `${siteUrl}/auth/callback`
   }
 });
