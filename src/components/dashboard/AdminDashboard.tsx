@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAuditLogs, fetchCourses } from '@/services/supabaseService';
@@ -54,7 +53,7 @@ const AdminDashboard = () => {
         
         // Transform students data to match User type
         // Cast with explicit type assertion
-        const typedStudentsData = studentsData as ProfilesRow[];
+        const typedStudentsData = studentsData as unknown as ProfilesRow[];
         const transformedStudents = typedStudentsData.map((s) => ({
           id: s.id,
           name: s.full_name,
@@ -65,7 +64,7 @@ const AdminDashboard = () => {
         
         // Transform teachers data to match User type
         // Cast with explicit type assertion
-        const typedTeachersData = teachersData as ProfilesRow[];
+        const typedTeachersData = teachersData as unknown as ProfilesRow[];
         const transformedTeachers = typedTeachersData.map((t) => ({
           id: t.id,
           name: t.full_name,

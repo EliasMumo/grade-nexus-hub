@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             if (profile) {
               // Cast the data to the correct type with explicit type assertion
-              const typedProfile = profile as ProfilesRow;
+              const typedProfile = profile as unknown as ProfilesRow;
               
               const userWithProfile: User = {
                 id: session.user.id,
@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (profile) {
             // Cast to correct type with explicit type assertion
-            const typedProfile = profile as ProfilesRow;
+            const typedProfile = profile as unknown as ProfilesRow;
             
             const userWithProfile: User = {
               id: session.user.id,

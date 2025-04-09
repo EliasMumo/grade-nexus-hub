@@ -9,6 +9,7 @@ type CoursesRow = Database['public']['Tables']['courses']['Row'];
 type GradesRow = Database['public']['Tables']['grades']['Row'];
 type EnrollmentsRow = Database['public']['Tables']['enrollments']['Row'];
 type AuditLogsRow = Database['public']['Tables']['audit_logs']['Row'];
+type AuditLogsInsert = Database['public']['Tables']['audit_logs']['Insert'];
 
 // Profiles
 export const fetchUserProfile = async (userId: string) => {
@@ -19,7 +20,7 @@ export const fetchUserProfile = async (userId: string) => {
     .single();
     
   if (error) throw error;
-  return data as ProfilesRow;
+  return data as unknown as ProfilesRow;
 };
 
 export const updateUserProfile = async (userId: string, updates: Partial<ProfilesRow>) => {
@@ -31,7 +32,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<Profile
     .single();
     
   if (error) throw error;
-  return data as ProfilesRow;
+  return data as unknown as ProfilesRow;
 };
 
 // Courses
@@ -45,7 +46,7 @@ export const fetchCourses = async () => {
   if (coursesError) throw coursesError;
   
   // Cast the coursesData to the correct type
-  const typedCoursesData = coursesData as CoursesRow[];
+  const typedCoursesData = coursesData as unknown as CoursesRow[];
   
   // Then, for each course, fetch the teacher profile
   const coursesWithTeachers = await Promise.all(typedCoursesData.map(async (course) => {
@@ -85,7 +86,7 @@ export const fetchCoursesByTeacher = async (teacherId: string) => {
     .order('name', { ascending: true });
     
   if (error) throw error;
-  return data as CoursesRow[];
+  return data as unknown as CoursesRow[];
 };
 
 export const fetchCoursesByStudent = async (studentId: string) => {
@@ -98,7 +99,7 @@ export const fetchCoursesByStudent = async (studentId: string) => {
   if (enrollmentsError) throw enrollmentsError;
   
   // Cast to the correct type
-  const typedEnrollmentsData = enrollmentsData as EnrollmentsRow[];
+  const typedEnrollmentsData = enrollmentsData as unknown as EnrollmentsRow[];
   
   if (!typedEnrollmentsData.length) {
     return [];
@@ -117,7 +118,7 @@ export const fetchCoursesByStudent = async (studentId: string) => {
   if (coursesError) throw coursesError;
   
   // Cast the coursesData to the correct type
-  const typedCoursesData = coursesData as CoursesRow[];
+  const typedCoursesData = coursesData as unknown as CoursesRow[];
   
   // Get teacher names for each course
   const coursesWithTeachers = await Promise.all(typedCoursesData.map(async (course) => {
@@ -159,7 +160,7 @@ export const fetchEnrollments = async (courseId: string) => {
   if (enrollmentsError) throw enrollmentsError;
   
   // Cast to the correct type
-  const typedEnrollmentsData = enrollmentsData as EnrollmentsRow[];
+  const typedEnrollmentsData = enrollmentsData as unknown as EnrollmentsRow[];
   
   // Fetch student names
   const enrollmentsWithStudents = await Promise.all(typedEnrollmentsData.map(async (enrollment) => {
@@ -190,7 +191,7 @@ export const fetchGradesByStudent = async (studentId: string) => {
   if (gradesError) throw gradesError;
   
   // Cast to the correct type
-  const typedGradesData = gradesData as GradesRow[];
+  const typedGradesData = gradesData as unknown as GradesRow[];
   
   // Fetch course names and grader names
   const gradesWithDetails = await Promise.all(typedGradesData.map(async (grade) => {
@@ -226,7 +227,7 @@ export const fetchGradesByCourse = async (courseId: string) => {
   if (gradesError) throw gradesError;
   
   // Cast to the correct type
-  const typedGradesData = gradesData as GradesRow[];
+  const typedGradesData = gradesData as unknown as GradesRow[];
   
   // Fetch student names
   const gradesWithStudents = await Promise.all(typedGradesData.map(async (grade) => {
@@ -290,7 +291,7 @@ export const fetchStudentReport = async (studentId: string): Promise<GradeReport
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name')
-      .eq('id', studentId)
+      .eq('id', studentId as any)
       .single();
       
     return {
@@ -312,7 +313,7 @@ export const fetchClassPerformance = async (courseId: string): Promise<ClassPerf
     const { data: course } = await supabase
       .from('courses')
       .select('*')
-      .eq('id', courseId)
+      .eq('id', courseId as any)
       .single();
       
     if (!course) {
@@ -320,7 +321,7 @@ export const fetchClassPerformance = async (courseId: string): Promise<ClassPerf
     }
     
     // Cast to correct type
-    const typedCourse = course as CoursesRow;
+    const typedCourse = course as unknown as CoursesRow;
     
     // Get all grades for this course
     const grades = await fetchGradesByCourse(courseId);
@@ -390,7 +391,7 @@ export const fetchAuditLogs = async (limit = 10): Promise<AuditLog[]> => {
     if (error) throw error;
     
     // Cast to correct type
-    const typedLogsData = data as AuditLogsRow[];
+    const typedLogsData = data as unknown as AuditLogsRow[];
     
     // Fetch user profiles for each log
     const logsWithUserDetails = await Promise.all(typedLogsData.map(async (log) => {
@@ -398,7 +399,7 @@ export const fetchAuditLogs = async (limit = 10): Promise<AuditLog[]> => {
         const { data: userProfile } = await supabase
           .from('profiles')
           .select('full_name, role')
-          .eq('id', log.user_id)
+          .eq('id', log.user_id as any)
           .single();
           
         return {
@@ -439,8 +440,8 @@ export const createAuditLog = async (
   details?: any
 ) => {
   try {
-    // Fix: Explicitly type the insertData to match the Supabase expected insert type
-    const insertData: Database['public']['Tables']['audit_logs']['Insert'] = {
+    // Fix: Explicitly typing the insert data to match the expected Supabase type
+    const insertData: AuditLogsInsert = {
       user_id: userId,
       action,
       entity_type: entityType,
@@ -450,7 +451,7 @@ export const createAuditLog = async (
     
     const { error } = await supabase
       .from('audit_logs')
-      .insert(insertData);
+      .insert(insertData as any);
       
     if (error) throw error;
   } catch (error) {
