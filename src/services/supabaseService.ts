@@ -1,6 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { User, Course, Grade, GradeReport, ClassPerformance, AuditLog } from '@/types';
+import { Database } from '@/integrations/supabase/types';
+
+type ProfilesRow = Database['public']['Tables']['profiles']['Row'];
+type CoursesRow = Database['public']['Tables']['courses']['Row'];
+type GradesRow = Database['public']['Tables']['grades']['Row'];
+type EnrollmentsRow = Database['public']['Tables']['enrollments']['Row'];
+type AuditLogsRow = Database['public']['Tables']['audit_logs']['Row'];
 
 // Profiles
 export const fetchUserProfile = async (userId: string) => {
@@ -14,7 +21,7 @@ export const fetchUserProfile = async (userId: string) => {
   return data;
 };
 
-export const updateUserProfile = async (userId: string, updates: any) => {
+export const updateUserProfile = async (userId: string, updates: Partial<ProfilesRow>) => {
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)

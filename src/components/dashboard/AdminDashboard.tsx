@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAuditLogs, fetchCourses } from '@/services/supabaseService';
@@ -12,6 +11,9 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
+
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -50,7 +52,7 @@ const AdminDashboard = () => {
         const logs = await fetchAuditLogs(10);
         
         // Transform students data to match User type
-        const transformedStudents = studentsData.map(s => ({
+        const transformedStudents = studentsData.map((s: ProfileRow) => ({
           id: s.id,
           name: s.full_name,
           email: '', // We don't get emails from profiles table
@@ -59,7 +61,7 @@ const AdminDashboard = () => {
         }));
         
         // Transform teachers data to match User type
-        const transformedTeachers = teachersData.map(t => ({
+        const transformedTeachers = teachersData.map((t: ProfileRow) => ({
           id: t.id,
           name: t.full_name,
           email: '', // We don't get emails from profiles table
@@ -92,7 +94,6 @@ const AdminDashboard = () => {
     );
   }
 
-  // Generate system activity data (simulated)
   const generateActivityData = () => {
     const data = [];
     const now = new Date();
@@ -101,7 +102,6 @@ const AdminDashboard = () => {
       const date = new Date(now);
       date.setDate(now.getDate() - i);
       
-      // Generate realistic pattern with higher activity on weekdays
       const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       
@@ -121,7 +121,6 @@ const AdminDashboard = () => {
 
   const activityData = generateActivityData();
   
-  // Calculate new users in last 7 days (simulated for now)
   const newUsersCount = 8;
 
   const getInitials = (name: string) => {
