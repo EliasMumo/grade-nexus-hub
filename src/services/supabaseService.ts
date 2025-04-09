@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { User, Course, Grade, GradeReport, ClassPerformance, AuditLog } from '@/types';
+import { User, Course, Grade, GradeReport, ClassPerformance, AuditLog, UserRole } from '@/types';
 import { Database } from '@/integrations/supabase/types';
 
 type ProfilesRow = Database['public']['Tables']['profiles']['Row'];
@@ -35,26 +35,42 @@ export const updateUserProfile = async (userId: string, updates: Partial<Profile
 
 // Courses
 export const fetchCourses = async () => {
-  const { data, error } = await supabase
+  // First, fetch all courses
+  const { data: coursesData, error: coursesError } = await supabase
     .from('courses')
-    .select(`
-      *,
-      teacher:teacher_id (
-        id,
-        profiles (full_name)
-      )
-    `)
+    .select('*')
     .order('name', { ascending: true });
     
-  if (error) throw error;
+  if (coursesError) throw coursesError;
   
-  return data.map((course) => ({
-    id: course.id,
-    name: course.name,
-    code: course.code,
-    teacherId: course.teacher_id,
-    teacherName: course.teacher?.profiles?.full_name || 'Unknown',
+  // Then, for each course, fetch the teacher profile
+  const coursesWithTeachers = await Promise.all(coursesData.map(async (course) => {
+    if (course.teacher_id) {
+      const { data: teacherProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', course.teacher_id)
+        .single();
+        
+      return {
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        teacherId: course.teacher_id,
+        teacherName: teacherProfile?.full_name || 'Unknown',
+      };
+    } else {
+      return {
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        teacherId: null,
+        teacherName: 'Unassigned',
+      };
+    }
   }));
+  
+  return coursesWithTeachers;
 };
 
 export const fetchCoursesByTeacher = async (teacherId: string) => {
@@ -69,115 +85,151 @@ export const fetchCoursesByTeacher = async (teacherId: string) => {
 };
 
 export const fetchCoursesByStudent = async (studentId: string) => {
-  const { data, error } = await supabase
+  // First, get all enrollments for this student
+  const { data: enrollmentsData, error: enrollmentsError } = await supabase
     .from('enrollments')
-    .select(`
-      course_id,
-      courses (
-        id,
-        name,
-        code,
-        teacher_id,
-        teacher:teacher_id (
-          id,
-          profiles (full_name)
-        )
-      )
-    `)
+    .select('course_id')
     .eq('student_id', studentId);
     
-  if (error) throw error;
+  if (enrollmentsError) throw enrollmentsError;
   
-  return data.map((enrollment) => ({
-    id: enrollment.courses.id,
-    name: enrollment.courses.name,
-    code: enrollment.courses.code,
-    teacherId: enrollment.courses.teacher_id,
-    teacherName: enrollment.courses.teacher?.profiles?.full_name || 'Unknown',
+  if (!enrollmentsData.length) {
+    return [];
+  }
+  
+  // Extract course IDs
+  const courseIds = enrollmentsData.map(enrollment => enrollment.course_id);
+  
+  // Fetch courses
+  const { data: coursesData, error: coursesError } = await supabase
+    .from('courses')
+    .select('*')
+    .in('id', courseIds)
+    .order('name', { ascending: true });
+    
+  if (coursesError) throw coursesError;
+  
+  // Get teacher names for each course
+  const coursesWithTeachers = await Promise.all(coursesData.map(async (course) => {
+    if (course.teacher_id) {
+      const { data: teacherProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', course.teacher_id)
+        .single();
+        
+      return {
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        teacherId: course.teacher_id,
+        teacherName: teacherProfile?.full_name || 'Unknown',
+      };
+    } else {
+      return {
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        teacherId: null,
+        teacherName: 'Unassigned',
+      };
+    }
   }));
+  
+  return coursesWithTeachers;
 };
 
 // Enrollments
 export const fetchEnrollments = async (courseId: string) => {
-  const { data, error } = await supabase
+  const { data: enrollmentsData, error: enrollmentsError } = await supabase
     .from('enrollments')
-    .select(`
-      id,
-      student_id,
-      student:student_id (
-        id,
-        profiles (full_name)
-      )
-    `)
+    .select('id, student_id')
     .eq('course_id', courseId);
     
-  if (error) throw error;
+  if (enrollmentsError) throw enrollmentsError;
   
-  return data.map((enrollment) => ({
-    id: enrollment.id,
-    studentId: enrollment.student_id,
-    studentName: enrollment.student?.profiles?.full_name || 'Unknown',
+  // Fetch student names
+  const enrollmentsWithStudents = await Promise.all(enrollmentsData.map(async (enrollment) => {
+    const { data: studentProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', enrollment.student_id)
+      .single();
+      
+    return {
+      id: enrollment.id,
+      studentId: enrollment.student_id,
+      studentName: studentProfile?.full_name || 'Unknown',
+    };
   }));
+  
+  return enrollmentsWithStudents;
 };
 
 // Grades
 export const fetchGradesByStudent = async (studentId: string) => {
-  const { data, error } = await supabase
+  const { data: gradesData, error: gradesError } = await supabase
     .from('grades')
-    .select(`
-      *,
-      course:course_id (
-        id,
-        name,
-        code
-      ),
-      grader:graded_by (
-        id,
-        profiles (full_name)
-      )
-    `)
+    .select('*')
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
     
-  if (error) throw error;
+  if (gradesError) throw gradesError;
   
-  return data.map((grade) => ({
-    id: grade.id,
-    studentId: grade.student_id,
-    studentName: '', // Will be filled by the calling component
-    courseId: grade.course_id,
-    courseName: grade.course?.name || 'Unknown',
-    value: grade.value,
-    comment: grade.comment,
-    date: grade.graded_at,
+  // Fetch course names and grader names
+  const gradesWithDetails = await Promise.all(gradesData.map(async (grade) => {
+    // Get course details
+    const { data: course } = await supabase
+      .from('courses')
+      .select('name')
+      .eq('id', grade.course_id)
+      .single();
+      
+    return {
+      id: grade.id,
+      studentId: grade.student_id,
+      studentName: '', // Will be filled by the calling component
+      courseId: grade.course_id,
+      courseName: course?.name || 'Unknown',
+      value: grade.value,
+      comment: grade.comment,
+      date: grade.graded_at,
+    };
   }));
+  
+  return gradesWithDetails;
 };
 
 export const fetchGradesByCourse = async (courseId: string) => {
-  const { data, error } = await supabase
+  const { data: gradesData, error: gradesError } = await supabase
     .from('grades')
-    .select(`
-      *,
-      student:student_id (
-        id,
-        profiles (full_name)
-      )
-    `)
+    .select('*')
     .eq('course_id', courseId)
     .order('created_at', { ascending: false });
     
-  if (error) throw error;
+  if (gradesError) throw gradesError;
   
-  return data.map((grade) => ({
-    id: grade.id,
-    studentId: grade.student_id,
-    studentName: grade.student?.profiles?.full_name || 'Unknown',
-    courseId: grade.course_id,
-    courseName: '', // Will be filled by the calling component
-    value: grade.value,
-    comment: grade.comment,
-    date: grade.graded_at,
+  // Fetch student names
+  const gradesWithStudents = await Promise.all(gradesData.map(async (grade) => {
+    const { data: studentProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', grade.student_id)
+      .single();
+      
+    return {
+      id: grade.id,
+      studentId: grade.student_id,
+      studentName: studentProfile?.full_name || 'Unknown',
+      courseId: grade.course_id,
+      courseName: '', // Will be filled by the calling component
+      value: grade.value,
+      comment: grade.comment,
+      date: grade.graded_at,
+    };
   }));
+  
+  return gradesWithStudents;
 };
 
 // Student reports
@@ -240,13 +292,7 @@ export const fetchClassPerformance = async (courseId: string): Promise<ClassPerf
     // Get course details
     const { data: course } = await supabase
       .from('courses')
-      .select(`
-        *,
-        teacher:teacher_id (
-          id,
-          profiles (full_name)
-        )
-      `)
+      .select('*')
       .eq('id', courseId)
       .single();
       
@@ -315,27 +361,44 @@ export const fetchAuditLogs = async (limit = 10): Promise<AuditLog[]> => {
   try {
     const { data, error } = await supabase
       .from('audit_logs')
-      .select(`
-        *,
-        user:user_id (
-          id,
-          profiles (full_name, role)
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
       
     if (error) throw error;
     
-    return data.map(log => ({
-      id: log.id,
-      userId: log.user_id,
-      userName: log.user?.profiles?.full_name || 'System',
-      userRole: (log.user?.profiles?.role as UserRole) || 'admin',
-      action: log.action,
-      details: log.details,
-      timestamp: log.created_at,
+    // Fetch user profiles for each log
+    const logsWithUserDetails = await Promise.all(data.map(async (log) => {
+      if (log.user_id) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('full_name, role')
+          .eq('id', log.user_id)
+          .single();
+          
+        return {
+          id: log.id,
+          userId: log.user_id,
+          userName: userProfile?.full_name || 'System',
+          userRole: userProfile?.role as UserRole || 'admin',
+          action: log.action,
+          details: typeof log.details === 'string' ? log.details : JSON.stringify(log.details),
+          timestamp: log.created_at,
+        };
+      } else {
+        return {
+          id: log.id,
+          userId: '',
+          userName: 'System',
+          userRole: 'admin' as UserRole,
+          action: log.action,
+          details: typeof log.details === 'string' ? log.details : JSON.stringify(log.details),
+          timestamp: log.created_at,
+        };
+      }
     }));
+    
+    return logsWithUserDetails;
   } catch (error) {
     console.error('Error fetching audit logs:', error);
     return [];

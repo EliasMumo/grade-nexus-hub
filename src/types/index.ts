@@ -63,6 +63,6 @@ export interface AuditLog {
   userName: string;
   userRole: UserRole;
   action: string;
-  details: string;
+  details: string; // Changed from string to string to match the data from Supabase
   timestamp: string;
 }
