@@ -12,13 +12,20 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Get current site origin for redirects
 const siteUrl = window.location.origin;
 
+// Create Supabase client with properly configured auth options
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     storageKey: 'gradenexus-auth-token',
     flowType: 'pkce',
-    // Fix: Changed 'redirect_to' to 'redirectTo' which is the correct property name
-    redirectTo: `${siteUrl}/auth/callback`
+    // Fix: Use the global auth options instead of redirect property
+    // Setting the site URL will be used to redirect after auth events
   }
+});
+
+// Configure auth redirect URL (method depends on Supabase version)
+// This doesn't go into the client configuration but is set separately
+supabase.auth.setConfig({
+  site_url: `${siteUrl}/auth/callback`,
 });
