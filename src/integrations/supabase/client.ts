@@ -19,7 +19,5 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     storageKey: 'gradenexus-auth-token',
     flowType: 'pkce',
-    // Instead of using setConfig, we directly provide the redirect URL in the auth config
-    redirectTo: `${siteUrl}/auth/callback`
   }
 });
