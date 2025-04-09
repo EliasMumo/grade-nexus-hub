@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAuditLogs, fetchCourses } from '@/services/supabaseService';
@@ -33,7 +34,7 @@ const AdminDashboard = () => {
         const { data: studentsData, error: studentsError } = await supabase
           .from('profiles')
           .select('*')
-          .filter('role', 'eq', 'student');
+          .eq('role', 'student');
           
         if (studentsError) throw studentsError;
         
@@ -41,7 +42,7 @@ const AdminDashboard = () => {
         const { data: teachersData, error: teachersError } = await supabase
           .from('profiles')
           .select('*')
-          .filter('role', 'eq', 'teacher');
+          .eq('role', 'teacher');
           
         if (teachersError) throw teachersError;
         
@@ -52,7 +53,8 @@ const AdminDashboard = () => {
         const logs = await fetchAuditLogs(10);
         
         // Transform students data to match User type
-        const transformedStudents = (studentsData as ProfilesRow[]).map((s) => ({
+        const typedStudentsData = studentsData as unknown as ProfilesRow[];
+        const transformedStudents = typedStudentsData.map((s) => ({
           id: s.id,
           name: s.full_name,
           email: '', // We don't get emails from profiles table
@@ -61,7 +63,8 @@ const AdminDashboard = () => {
         }));
         
         // Transform teachers data to match User type
-        const transformedTeachers = (teachersData as ProfilesRow[]).map((t) => ({
+        const typedTeachersData = teachersData as unknown as ProfilesRow[];
+        const transformedTeachers = typedTeachersData.map((t) => ({
           id: t.id,
           name: t.full_name,
           email: '', // We don't get emails from profiles table

@@ -44,8 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (error) throw error;
             
             if (profile) {
-              // Explicitly cast profile to ProfilesRow to avoid TypeScript errors
-              const typedProfile = profile as ProfilesRow;
+              // Cast the data to the correct type
+              const typedProfile = profile as unknown as ProfilesRow;
               
               const userWithProfile: User = {
                 id: session.user.id,
@@ -89,8 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (error) throw error;
           
           if (profile) {
-            // Explicitly cast profile to ProfilesRow to avoid TypeScript errors
-            const typedProfile = profile as ProfilesRow;
+            // Cast to correct type
+            const typedProfile = profile as unknown as ProfilesRow;
             
             const userWithProfile: User = {
               id: session.user.id,

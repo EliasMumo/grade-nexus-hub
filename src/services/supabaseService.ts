@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, Course, Grade, GradeReport, ClassPerformance, AuditLog, UserRole } from '@/types';
 import { Database } from '@/integrations/supabase/types';
@@ -14,23 +13,23 @@ export const fetchUserProfile = async (userId: string) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .filter('id', 'eq', userId)
+    .eq('id', userId)
     .single();
     
   if (error) throw error;
-  return data as ProfilesRow;
+  return data as unknown as ProfilesRow;
 };
 
 export const updateUserProfile = async (userId: string, updates: Partial<ProfilesRow>) => {
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates as any) // Type cast as any to bypass strict type checking
-    .filter('id', 'eq', userId)
+    .update(updates)
+    .eq('id', userId)
     .select()
     .single();
     
   if (error) throw error;
-  return data as ProfilesRow;
+  return data as unknown as ProfilesRow;
 };
 
 // Courses
@@ -44,7 +43,7 @@ export const fetchCourses = async () => {
   if (coursesError) throw coursesError;
   
   // Cast the coursesData to the correct type
-  const typedCoursesData = coursesData as CoursesRow[];
+  const typedCoursesData = coursesData as unknown as CoursesRow[];
   
   // Then, for each course, fetch the teacher profile
   const coursesWithTeachers = await Promise.all(typedCoursesData.map(async (course) => {
@@ -52,7 +51,7 @@ export const fetchCourses = async () => {
       const { data: teacherProfile } = await supabase
         .from('profiles')
         .select('full_name')
-        .filter('id', 'eq', course.teacher_id)
+        .eq('id', course.teacher_id)
         .single();
         
       return {
@@ -60,7 +59,7 @@ export const fetchCourses = async () => {
         name: course.name,
         code: course.code,
         teacherId: course.teacher_id,
-        teacherName: (teacherProfile as ProfilesRow)?.full_name || 'Unknown',
+        teacherName: (teacherProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
       };
     } else {
       return {
@@ -80,11 +79,11 @@ export const fetchCoursesByTeacher = async (teacherId: string) => {
   const { data, error } = await supabase
     .from('courses')
     .select('*')
-    .filter('teacher_id', 'eq', teacherId)
+    .eq('teacher_id', teacherId)
     .order('name', { ascending: true });
     
   if (error) throw error;
-  return data as CoursesRow[];
+  return data as unknown as CoursesRow[];
 };
 
 export const fetchCoursesByStudent = async (studentId: string) => {
@@ -92,12 +91,12 @@ export const fetchCoursesByStudent = async (studentId: string) => {
   const { data: enrollmentsData, error: enrollmentsError } = await supabase
     .from('enrollments')
     .select('course_id')
-    .filter('student_id', 'eq', studentId);
+    .eq('student_id', studentId);
     
   if (enrollmentsError) throw enrollmentsError;
   
   // Cast to the correct type
-  const typedEnrollmentsData = enrollmentsData as EnrollmentsRow[];
+  const typedEnrollmentsData = enrollmentsData as unknown as EnrollmentsRow[];
   
   if (!typedEnrollmentsData.length) {
     return [];
@@ -110,13 +109,13 @@ export const fetchCoursesByStudent = async (studentId: string) => {
   const { data: coursesData, error: coursesError } = await supabase
     .from('courses')
     .select('*')
-    .in('id', courseIds)
+    .in('id', courseIds as string[])
     .order('name', { ascending: true });
     
   if (coursesError) throw coursesError;
   
   // Cast the coursesData to the correct type
-  const typedCoursesData = coursesData as CoursesRow[];
+  const typedCoursesData = coursesData as unknown as CoursesRow[];
   
   // Get teacher names for each course
   const coursesWithTeachers = await Promise.all(typedCoursesData.map(async (course) => {
@@ -124,7 +123,7 @@ export const fetchCoursesByStudent = async (studentId: string) => {
       const { data: teacherProfile } = await supabase
         .from('profiles')
         .select('full_name')
-        .filter('id', 'eq', course.teacher_id)
+        .eq('id', course.teacher_id)
         .single();
         
       return {
@@ -132,7 +131,7 @@ export const fetchCoursesByStudent = async (studentId: string) => {
         name: course.name,
         code: course.code,
         teacherId: course.teacher_id,
-        teacherName: (teacherProfile as ProfilesRow)?.full_name || 'Unknown',
+        teacherName: (teacherProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
       };
     } else {
       return {
@@ -153,25 +152,25 @@ export const fetchEnrollments = async (courseId: string) => {
   const { data: enrollmentsData, error: enrollmentsError } = await supabase
     .from('enrollments')
     .select('id, student_id')
-    .filter('course_id', 'eq', courseId);
+    .eq('course_id', courseId);
     
   if (enrollmentsError) throw enrollmentsError;
   
   // Cast to the correct type
-  const typedEnrollmentsData = enrollmentsData as EnrollmentsRow[];
+  const typedEnrollmentsData = enrollmentsData as unknown as EnrollmentsRow[];
   
   // Fetch student names
   const enrollmentsWithStudents = await Promise.all(typedEnrollmentsData.map(async (enrollment) => {
     const { data: studentProfile } = await supabase
       .from('profiles')
       .select('full_name')
-      .filter('id', 'eq', enrollment.student_id)
+      .eq('id', enrollment.student_id)
       .single();
       
     return {
       id: enrollment.id,
       studentId: enrollment.student_id,
-      studentName: (studentProfile as ProfilesRow)?.full_name || 'Unknown',
+      studentName: (studentProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
     };
   }));
   
@@ -183,13 +182,13 @@ export const fetchGradesByStudent = async (studentId: string) => {
   const { data: gradesData, error: gradesError } = await supabase
     .from('grades')
     .select('*')
-    .filter('student_id', 'eq', studentId)
+    .eq('student_id', studentId)
     .order('created_at', { ascending: false });
     
   if (gradesError) throw gradesError;
   
   // Cast to the correct type
-  const typedGradesData = gradesData as GradesRow[];
+  const typedGradesData = gradesData as unknown as GradesRow[];
   
   // Fetch course names and grader names
   const gradesWithDetails = await Promise.all(typedGradesData.map(async (grade) => {
@@ -197,7 +196,7 @@ export const fetchGradesByStudent = async (studentId: string) => {
     const { data: course } = await supabase
       .from('courses')
       .select('name')
-      .filter('id', 'eq', grade.course_id)
+      .eq('id', grade.course_id)
       .single();
       
     return {
@@ -219,26 +218,26 @@ export const fetchGradesByCourse = async (courseId: string) => {
   const { data: gradesData, error: gradesError } = await supabase
     .from('grades')
     .select('*')
-    .filter('course_id', 'eq', courseId)
+    .eq('course_id', courseId)
     .order('created_at', { ascending: false });
     
   if (gradesError) throw gradesError;
   
   // Cast to the correct type
-  const typedGradesData = gradesData as GradesRow[];
+  const typedGradesData = gradesData as unknown as GradesRow[];
   
   // Fetch student names
   const gradesWithStudents = await Promise.all(typedGradesData.map(async (grade) => {
     const { data: studentProfile } = await supabase
       .from('profiles')
       .select('full_name')
-      .filter('id', 'eq', grade.student_id)
+      .eq('id', grade.student_id)
       .single();
       
     return {
       id: grade.id,
       studentId: grade.student_id,
-      studentName: (studentProfile as ProfilesRow)?.full_name || 'Unknown',
+      studentName: (studentProfile as unknown as ProfilesRow)?.full_name || 'Unknown',
       courseId: grade.course_id,
       courseName: '', // Will be filled by the calling component
       value: grade.value,
@@ -289,12 +288,12 @@ export const fetchStudentReport = async (studentId: string): Promise<GradeReport
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name')
-      .filter('id', 'eq', studentId)
+      .eq('id', studentId)
       .single();
       
     return {
       studentId,
-      studentName: (profile as ProfilesRow)?.full_name || 'Unknown',
+      studentName: (profile as unknown as ProfilesRow)?.full_name || 'Unknown',
       courses: courseGrades,
       overallAverage,
     };
@@ -311,7 +310,7 @@ export const fetchClassPerformance = async (courseId: string): Promise<ClassPerf
     const { data: course } = await supabase
       .from('courses')
       .select('*')
-      .filter('id', 'eq', courseId)
+      .eq('id', courseId)
       .single();
       
     if (!course) {
@@ -397,14 +396,14 @@ export const fetchAuditLogs = async (limit = 10): Promise<AuditLog[]> => {
         const { data: userProfile } = await supabase
           .from('profiles')
           .select('full_name, role')
-          .filter('id', 'eq', log.user_id)
+          .eq('id', log.user_id)
           .single();
           
         return {
           id: log.id,
           userId: log.user_id,
-          userName: (userProfile as ProfilesRow)?.full_name || 'System',
-          userRole: (userProfile as ProfilesRow)?.role as UserRole || 'admin',
+          userName: (userProfile as unknown as ProfilesRow)?.full_name || 'System',
+          userRole: (userProfile as unknown as ProfilesRow)?.role as UserRole || 'admin',
           action: log.action,
           details: typeof log.details === 'string' ? log.details : JSON.stringify(log.details),
           timestamp: log.created_at,
@@ -448,7 +447,7 @@ export const createAuditLog = async (
     
     const { error } = await supabase
       .from('audit_logs')
-      .insert(insertData as any); // Type cast as any to bypass strict type checking
+      .insert(insertData);
       
     if (error) throw error;
   } catch (error) {
